@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
+import { captcha } from 'better-auth/plugins'
 import { getDb } from '@/db'
 import { account, session, user, verification } from '@/db/schema'
 import { optionalEnv, requiredEnv } from '@/lib/env'
@@ -38,4 +39,11 @@ export const auth = betterAuth({
     enabled: true,
     minPasswordLength: 8,
   },
+  plugins: [
+    captcha({
+      provider: 'cloudflare-turnstile',
+      secretKey: requiredEnv('TURNSTILE_SECRET_KEY'),
+      endpoints: ['/sign-up/email', '/sign-in/email'],
+    }),
+  ],
 })

@@ -1,11 +1,14 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Loader2, LogIn, UserPlus } from 'lucide-react'
 import { signIn, signUp } from '@/lib/auth-client'
+import { TurnstileWidget } from '@/components/TurnstileWidget'
 
 type AuthMode = 'login' | 'register'
+
+const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
 
 export function AuthForm() {
   const router = useRouter()
@@ -13,12 +16,38 @@ export function AuthForm() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const isRegistering = mode === 'register'
+
+  const handleTurnstileTokenChange = useCallback((token: string | null) => {
+    setTurnstileToken(token)
+  }, [])
+
+  useEffect(() => {
+    setTurnstileToken(null)
+    setTurnstileResetKey(key => key + 1)
+  }, [mode])
+
+  function resetTurnstile() {
+    setTurnstileToken(null)
+    setTurnstileResetKey(key => key + 1)
+  }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
+
+    if (!turnstileToken) {
+      setError('请先完成人机验证。')
+      return
+    }
+
+    const captchaResponse = turnstileToken ?? ''
+
     setIsSubmitting(true)
 
     try {
@@ -27,15 +56,26 @@ export function AuthForm() {
           ? await signIn.email({
               email,
               password,
+              fetchOptions: {
+                headers: {
+                  'x-captcha-response': captchaResponse,
+                },
+              },
             })
           : await signUp.email({
               name: name.trim() || email.split('@')[0] || '新用户',
               email,
               password,
+              fetchOptions: {
+                headers: {
+                  'x-captcha-response': captchaResponse,
+                },
+              },
             })
 
       if (result.error) {
         setError(result.error.message ?? '认证失败，请检查邮箱和密码。')
+        resetTurnstile()
         return
       }
 
@@ -43,12 +83,11 @@ export function AuthForm() {
       router.refresh()
     } catch {
       setError('认证服务暂时不可用，请稍后再试。')
+      resetTurnstile()
     } finally {
       setIsSubmitting(false)
     }
   }
-
-  const isRegistering = mode === 'register'
 
   return (
     <form
@@ -134,6 +173,20 @@ export function AuthForm() {
             placeholder="至少 8 位"
           />
         </label>
+
+        <div>
+          {turnstileSiteKey ? (
+            <TurnstileWidget
+              key={turnstileResetKey}
+              siteKey={turnstileSiteKey}
+              onTokenChange={handleTurnstileTokenChange}
+            />
+          ) : (
+            <div className="rounded-md border border-[#f0b7c2] bg-[#fff1f4] px-3 py-2 text-sm text-[#a33d55]">
+              Turnstile 站点密钥未配置。
+            </div>
+          )}
+        </div>
       </div>
 
       {error ? (
@@ -144,7 +197,7 @@ export function AuthForm() {
 
       <button
         type="submit"
-        disabled={isSubmitting}
+        disabled={isSubmitting || !turnstileSiteKey || !turnstileToken}
         className="mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[#bd5b79] px-4 font-medium text-white transition hover:bg-[#a64b68] disabled:bg-[#d8a8b8]"
       >
         {isSubmitting ? (
