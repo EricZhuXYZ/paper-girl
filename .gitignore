@@ -1,0 +1,11 @@
+.env
+.env.local
+.env.*.local
+.next
+node_modules
+dist
+coverage
+drizzle
+*.log
+.DS_Store
+纸片人女友聊天产品 MVP SPEC 最终版.md
