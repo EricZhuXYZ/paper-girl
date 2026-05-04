@@ -3,6 +3,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { captcha } from 'better-auth/plugins'
 import { getDb } from '@/db'
 import { account, session, user, verification } from '@/db/schema'
+import { sendWelcomeEmail } from '@/lib/email'
 import { optionalEnv, requiredEnv } from '@/lib/env'
 
 function getAuthSecret() {
@@ -38,6 +39,19 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 8,
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        async after(user) {
+          try {
+            await sendWelcomeEmail(user.email, user.name)
+          } catch (error) {
+            console.error('欢迎邮件发送失败：', error)
+          }
+        },
+      },
+    },
   },
   plugins: [
     captcha({
