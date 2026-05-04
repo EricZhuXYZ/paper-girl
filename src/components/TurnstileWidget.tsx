@@ -39,7 +39,18 @@ export function TurnstileWidget({ siteKey, onTokenChange }: TurnstileWidgetProps
   }, [onTokenChange])
 
   useEffect(() => {
-    if (window.turnstile) setScriptLoaded(true)
+    if (window.turnstile) {
+      setScriptLoaded(true)
+      return
+    }
+
+    const interval = window.setInterval(() => {
+      if (!window.turnstile) return
+      setScriptLoaded(true)
+      window.clearInterval(interval)
+    }, 100)
+
+    return () => window.clearInterval(interval)
   }, [])
 
   useEffect(() => {
@@ -56,34 +67,42 @@ export function TurnstileWidget({ siteKey, onTokenChange }: TurnstileWidgetProps
   useEffect(() => {
     if (!scriptLoaded || !containerRef.current || !window.turnstile) return
 
-    const widgetId = window.turnstile.render(containerRef.current, {
-      sitekey: siteKey,
-      theme: 'light',
-      callback: token => {
-        setStatus('ready')
-        setErrorCode(null)
-        onTokenChangeRef.current(token)
-      },
-      'expired-callback': () => {
-        setStatus('loading')
-        onTokenChangeRef.current(null)
-      },
-      'error-callback': errorCode => {
-        setStatus('error')
-        setErrorCode(errorCode ?? null)
-        onTokenChangeRef.current(null)
-        return true
-      },
-      'timeout-callback': () => {
-        setStatus('error')
-        setErrorCode('timeout')
-        onTokenChangeRef.current(null)
-      },
-    })
+    let widgetId: string | null = null
+
+    try {
+      widgetId = window.turnstile.render(containerRef.current, {
+        sitekey: siteKey,
+        theme: 'light',
+        callback: token => {
+          setStatus('ready')
+          setErrorCode(null)
+          onTokenChangeRef.current(token)
+        },
+        'expired-callback': () => {
+          setStatus('loading')
+          onTokenChangeRef.current(null)
+        },
+        'error-callback': errorCode => {
+          setStatus('error')
+          setErrorCode(errorCode ?? null)
+          onTokenChangeRef.current(null)
+          return true
+        },
+        'timeout-callback': () => {
+          setStatus('error')
+          setErrorCode('timeout')
+          onTokenChangeRef.current(null)
+        },
+      })
+    } catch {
+      setStatus('error')
+      setErrorCode('render-failed')
+      onTokenChangeRef.current(null)
+    }
 
     return () => {
       onTokenChangeRef.current(null)
-      window.turnstile?.remove(widgetId)
+      if (widgetId) window.turnstile?.remove(widgetId)
     }
   }, [scriptLoaded, siteKey])
 
