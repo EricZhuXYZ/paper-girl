@@ -9,6 +9,7 @@ type TurnstileRenderOptions = {
   'expired-callback': () => void
   'error-callback': (errorCode?: string) => boolean
   'timeout-callback': () => void
+  size?: 'normal' | 'flexible' | 'compact'
   theme?: 'light' | 'dark' | 'auto'
 }
 
@@ -72,6 +73,7 @@ export function TurnstileWidget({ siteKey, onTokenChange }: TurnstileWidgetProps
     try {
       widgetId = window.turnstile.render(containerRef.current, {
         sitekey: siteKey,
+        size: 'flexible',
         theme: 'light',
         callback: token => {
           setStatus('ready')
@@ -115,7 +117,7 @@ export function TurnstileWidget({ siteKey, onTokenChange }: TurnstileWidgetProps
       />
       <div
         ref={containerRef}
-        className="min-h-[65px] overflow-hidden rounded-md border border-[#e6cbd4] bg-white px-3 py-2"
+        className="min-h-[65px] w-full overflow-hidden"
       />
       {status === 'loading' ? (
         <div className="mt-2 text-sm text-[#8b596a]">正在加载人机验证...</div>

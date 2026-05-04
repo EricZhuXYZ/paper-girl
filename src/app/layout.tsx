@@ -4,6 +4,14 @@ import './globals.css'
 export const metadata: Metadata = {
   title: '纸片人女友聊天',
   description: 'AI 虚拟恋爱聊天 MVP',
+  icons: {
+    icon: [
+      {
+        url: '/favicon.svg',
+        type: 'image/svg+xml',
+      },
+    ],
+  },
 }
 
 export default function RootLayout({
