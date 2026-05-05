@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { Loader2, LogIn, UserPlus } from 'lucide-react'
-import { authClient, signIn, signUp } from '@/lib/auth-client'
+import { signIn, signUp } from '@/lib/auth-client'
 import { TurnstileWidget } from '@/components/TurnstileWidget'
 
 type AuthMode = 'login' | 'register'
@@ -123,15 +123,6 @@ export function AuthForm() {
       }
 
       popup.location.href = authUrl
-
-      const signedIn = await waitForGoogleSession(popup)
-      if (!signedIn) {
-        setError('Google 登录窗口已关闭，请重新尝试。')
-        return
-      }
-
-      router.replace('/')
-      router.refresh()
     } catch {
       popup.close()
       setError('Google 登录服务暂时不可用，请稍后再试。')
@@ -302,68 +293,6 @@ function openGooglePopup() {
   ].join(',')
 
   return window.open('', googlePopupName, features)
-}
-
-function waitForGoogleSession(popup: Window) {
-  return new Promise<boolean>(resolve => {
-    let attempts = 0
-    const maxAttempts = 120
-
-    async function complete() {
-      try {
-        const session = await authClient.getSession()
-        if (session.data) {
-          cleanup()
-          popup.close()
-          resolve(true)
-        }
-      } catch {
-        // Session can take a moment to become readable after the callback.
-      }
-    }
-
-    function handleMessage(event: MessageEvent) {
-      if (event.origin !== window.location.origin) return
-      if (event.data?.type !== 'paper-girl:google-oauth-complete') return
-
-      void complete()
-    }
-
-    function cleanup() {
-      window.clearInterval(timer)
-      window.removeEventListener('message', handleMessage)
-    }
-
-    window.addEventListener('message', handleMessage)
-
-    const timer = window.setInterval(async () => {
-      attempts += 1
-
-      if (popup.closed) {
-        cleanup()
-        resolve(false)
-        return
-      }
-
-      try {
-        const session = await authClient.getSession()
-        if (session.data) {
-          popup.close()
-          cleanup()
-          resolve(true)
-          return
-        }
-      } catch {
-        // Session polling can fail briefly while OAuth is redirecting.
-      }
-
-      if (attempts >= maxAttempts) {
-        popup.close()
-        cleanup()
-        resolve(false)
-      }
-    }, 1000)
-  })
 }
 
 function GoogleLogo({ className }: { className?: string }) {

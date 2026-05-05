@@ -119,9 +119,6 @@ export function TurnstileWidget({ siteKey, onTokenChange }: TurnstileWidgetProps
         ref={containerRef}
         className="min-h-[65px] w-full overflow-hidden"
       />
-      {status === 'loading' ? (
-        <div className="mt-2 text-sm text-[#8b596a]">正在加载人机验证...</div>
-      ) : null}
       {status === 'error' ? (
         <div className="mt-2 rounded-md border border-[#f0b7c2] bg-[#fff1f4] px-3 py-2 text-sm text-[#a33d55]">
           Turnstile 加载失败
