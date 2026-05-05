@@ -11,11 +11,46 @@ function getAuthSecret() {
 }
 
 function getAuthBaseUrl() {
-  return (
+  const fallback =
     optionalEnv('BETTER_AUTH_URL') ??
     optionalEnv('NEXT_PUBLIC_APP_URL') ??
     'http://localhost:3000'
-  )
+
+  return {
+    allowedHosts: getAuthAllowedHosts(fallback),
+    fallback,
+  }
+}
+
+function getAuthAllowedHosts(fallback: string) {
+  return unique([
+    getHostname(fallback),
+    'localhost:3000',
+    '127.0.0.1:3000',
+    'paper-girl*.vercel.app',
+    'omniseek.top',
+    'www.omniseek.top',
+    ...parseEnvList('BETTER_AUTH_ALLOWED_HOSTS'),
+  ])
+}
+
+function getHostname(url: string) {
+  try {
+    return new URL(url).host
+  } catch {
+    return undefined
+  }
+}
+
+function parseEnvList(name: string) {
+  return optionalEnv(name)
+    ?.split(',')
+    .map(value => value.trim())
+    .filter(Boolean) ?? []
+}
+
+function unique(values: Array<string | undefined>) {
+  return Array.from(new Set(values.filter(Boolean))) as string[]
 }
 
 const db = getDb()

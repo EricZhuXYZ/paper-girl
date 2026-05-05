@@ -17,6 +17,8 @@ Fill `.env.local` before using real LLM, TTS, image generation, or database pers
 
 ```bash
 DATABASE_URL=
+BETTER_AUTH_URL=
+BETTER_AUTH_ALLOWED_HOSTS=
 OPENROUTER_API_KEY=
 DOUBAO_TTS_API_KEY=
 VOLCENGINE_ARK_API_KEY=
@@ -26,6 +28,10 @@ R2_ENDPOINT=
 R2_BUCKET_NAME=
 R2_PUBLIC_URL=
 ```
+
+For Vercel multi-domain deployments, `BETTER_AUTH_URL` should point to the
+primary production origin. Add any extra non-default domains to
+`BETTER_AUTH_ALLOWED_HOSTS` as a comma-separated host list.
 
 Database scripts:
 
