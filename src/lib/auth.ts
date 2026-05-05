@@ -19,6 +19,8 @@ function getAuthBaseUrl() {
 }
 
 const db = getDb()
+const googleClientId = optionalEnv('GOOGLE_CLIENT_ID')
+const googleClientSecret = optionalEnv('GOOGLE_CLIENT_SECRET')
 
 if (!db) {
   throw new Error('DATABASE_URL is required to initialize Better Auth')
@@ -39,6 +41,17 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 8,
+  },
+  socialProviders: {
+    ...(googleClientId && googleClientSecret
+      ? {
+          google: {
+            clientId: googleClientId,
+            clientSecret: googleClientSecret,
+            prompt: 'select_account',
+          },
+        }
+      : {}),
   },
   databaseHooks: {
     user: {

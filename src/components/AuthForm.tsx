@@ -2,13 +2,14 @@
 
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
-import { Loader2, LogIn, UserPlus } from 'lucide-react'
-import { signIn, signUp } from '@/lib/auth-client'
+import { Chrome, Loader2, LogIn, UserPlus } from 'lucide-react'
+import { authClient, signIn, signUp } from '@/lib/auth-client'
 import { TurnstileWidget } from '@/components/TurnstileWidget'
 
 type AuthMode = 'login' | 'register'
 
 const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+const googlePopupName = 'paper-girl-google-oauth'
 
 export function AuthForm() {
   const router = useRouter()
@@ -20,6 +21,7 @@ export function AuthForm() {
   const [turnstileResetKey, setTurnstileResetKey] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false)
 
   const isRegistering = mode === 'register'
 
@@ -89,6 +91,55 @@ export function AuthForm() {
     }
   }
 
+  async function onGoogleSignIn() {
+    setError(null)
+    setIsGoogleSubmitting(true)
+    const popup = openGooglePopup()
+
+    if (!popup) {
+      setError('浏览器阻止了 Google 登录弹窗，请允许弹窗后重试。')
+      setIsGoogleSubmitting(false)
+      return
+    }
+
+    try {
+      const result = await signIn.social({
+        provider: 'google',
+        callbackURL: '/',
+        disableRedirect: true,
+      })
+
+      if (result.error) {
+        setError(result.error.message ?? 'Google 登录失败，请稍后再试。')
+        popup.close()
+        return
+      }
+
+      const authUrl = result.data?.url
+      if (!authUrl) {
+        setError('Google 登录地址生成失败，请稍后再试。')
+        popup.close()
+        return
+      }
+
+      popup.location.href = authUrl
+
+      const signedIn = await waitForGoogleSession(popup)
+      if (!signedIn) {
+        setError('Google 登录窗口已关闭，请重新尝试。')
+        return
+      }
+
+      router.replace('/')
+      router.refresh()
+    } catch {
+      popup.close()
+      setError('Google 登录服务暂时不可用，请稍后再试。')
+    } finally {
+      setIsGoogleSubmitting(false)
+    }
+  }
+
   return (
     <form
       onSubmit={onSubmit}
@@ -99,6 +150,26 @@ export function AuthForm() {
         <h1 className="mt-2 text-2xl font-semibold tracking-normal text-[#241b20]">
           {isRegistering ? '创建账号' : '登录账号'}
         </h1>
+      </div>
+
+      <button
+        type="button"
+        onClick={onGoogleSignIn}
+        disabled={isSubmitting || isGoogleSubmitting}
+        className="mb-5 flex h-11 w-full items-center justify-center gap-2 rounded-md border border-[#e6cbd4] bg-white px-4 font-medium text-[#241b20] transition hover:border-[#bd5b79] hover:bg-[#fff7f9] disabled:text-[#a88a95]"
+      >
+        {isGoogleSubmitting ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Chrome className="h-4 w-4" />
+        )}
+        使用 Google 登录
+      </button>
+
+      <div className="mb-5 flex items-center gap-3">
+        <div className="h-px flex-1 bg-[#ead2da]" />
+        <span className="text-xs text-[#8b596a]">或使用邮箱</span>
+        <div className="h-px flex-1 bg-[#ead2da]" />
       </div>
 
       <div className="mb-5 grid grid-cols-2 rounded-md bg-[#f4e8ed] p-1">
@@ -138,7 +209,7 @@ export function AuthForm() {
               value={name}
               onChange={event => setName(event.target.value)}
               autoComplete="name"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isGoogleSubmitting}
               className="h-11 w-full rounded-md border border-[#e6cbd4] bg-white px-3 outline-none transition focus:border-[#bd5b79]"
               placeholder="给自己取个昵称"
             />
@@ -153,7 +224,7 @@ export function AuthForm() {
             type="email"
             autoComplete="email"
             required
-            disabled={isSubmitting}
+            disabled={isSubmitting || isGoogleSubmitting}
             className="h-11 w-full rounded-md border border-[#e6cbd4] bg-white px-3 outline-none transition focus:border-[#bd5b79]"
             placeholder="you@example.com"
           />
@@ -168,7 +239,7 @@ export function AuthForm() {
             autoComplete={isRegistering ? 'new-password' : 'current-password'}
             required
             minLength={8}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isGoogleSubmitting}
             className="h-11 w-full rounded-md border border-[#e6cbd4] bg-white px-3 outline-none transition focus:border-[#bd5b79]"
             placeholder="至少 8 位"
           />
@@ -197,7 +268,9 @@ export function AuthForm() {
 
       <button
         type="submit"
-        disabled={isSubmitting || !turnstileSiteKey || !turnstileToken}
+        disabled={
+          isSubmitting || isGoogleSubmitting || !turnstileSiteKey || !turnstileToken
+        }
         className="mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[#bd5b79] px-4 font-medium text-white transition hover:bg-[#a64b68] disabled:bg-[#d8a8b8]"
       >
         {isSubmitting ? (
@@ -211,4 +284,57 @@ export function AuthForm() {
       </button>
     </form>
   )
+}
+
+function openGooglePopup() {
+  const width = 480
+  const height = 640
+  const left = Math.max(0, window.screenX + (window.outerWidth - width) / 2)
+  const top = Math.max(0, window.screenY + (window.outerHeight - height) / 2)
+  const features = [
+    `width=${width}`,
+    `height=${height}`,
+    `left=${left}`,
+    `top=${top}`,
+    'popup=yes',
+    'resizable=yes',
+    'scrollbars=yes',
+  ].join(',')
+
+  return window.open('', googlePopupName, features)
+}
+
+function waitForGoogleSession(popup: Window) {
+  return new Promise<boolean>(resolve => {
+    let attempts = 0
+    const maxAttempts = 120
+
+    const timer = window.setInterval(async () => {
+      attempts += 1
+
+      if (popup.closed) {
+        window.clearInterval(timer)
+        resolve(false)
+        return
+      }
+
+      try {
+        const session = await authClient.getSession()
+        if (session.data) {
+          popup.close()
+          window.clearInterval(timer)
+          resolve(true)
+          return
+        }
+      } catch {
+        // Session polling can fail briefly while OAuth is redirecting.
+      }
+
+      if (attempts >= maxAttempts) {
+        popup.close()
+        window.clearInterval(timer)
+        resolve(false)
+      }
+    }, 1000)
+  })
 }
