@@ -105,7 +105,7 @@ export function AuthForm() {
     try {
       const result = await signIn.social({
         provider: 'google',
-        callbackURL: '/',
+        callbackURL: '/auth/popup-complete',
         disableRedirect: true,
       })
 
@@ -309,11 +309,38 @@ function waitForGoogleSession(popup: Window) {
     let attempts = 0
     const maxAttempts = 120
 
+    async function complete() {
+      try {
+        const session = await authClient.getSession()
+        if (session.data) {
+          cleanup()
+          popup.close()
+          resolve(true)
+        }
+      } catch {
+        // Session can take a moment to become readable after the callback.
+      }
+    }
+
+    function handleMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) return
+      if (event.data?.type !== 'paper-girl:google-oauth-complete') return
+
+      void complete()
+    }
+
+    function cleanup() {
+      window.clearInterval(timer)
+      window.removeEventListener('message', handleMessage)
+    }
+
+    window.addEventListener('message', handleMessage)
+
     const timer = window.setInterval(async () => {
       attempts += 1
 
       if (popup.closed) {
-        window.clearInterval(timer)
+        cleanup()
         resolve(false)
         return
       }
@@ -322,7 +349,7 @@ function waitForGoogleSession(popup: Window) {
         const session = await authClient.getSession()
         if (session.data) {
           popup.close()
-          window.clearInterval(timer)
+          cleanup()
           resolve(true)
           return
         }
@@ -332,7 +359,7 @@ function waitForGoogleSession(popup: Window) {
 
       if (attempts >= maxAttempts) {
         popup.close()
-        window.clearInterval(timer)
+        cleanup()
         resolve(false)
       }
     }, 1000)
