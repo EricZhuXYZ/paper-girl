@@ -137,10 +137,7 @@ export function AuthForm() {
       className="w-full max-w-[420px] rounded-lg border border-[#ead2da] bg-white/82 p-6 shadow-soft backdrop-blur"
     >
       <div className="mb-6">
-        <p className="text-sm font-medium text-[#bd5b79]">欢迎登录纸片人</p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-normal text-[#241b20]">
-          欢迎登录纸片人
-        </h1>
+        <h1 className="text-2xl font-semibold tracking-normal text-[#241b20]">欢迎登录纸片人</h1>
       </div>
 
       <button
