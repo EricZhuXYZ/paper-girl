@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { characters } from '@/data/characters'
 import { CharacterCard } from '@/components/CharacterCard'
 import { SignOutButton } from '@/components/SignOutButton'
@@ -18,12 +17,6 @@ export function CharacterSelect({ user }: { user: { name: string; email: string 
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link
-              href="/prompts"
-              className="inline-flex h-10 items-center rounded-md border border-[#e7cbd4] bg-white/70 px-3 text-sm text-[#8b596a] transition hover:bg-white"
-            >
-              Prompt 调试
-            </Link>
             <SignOutButton />
           </div>
         </div>

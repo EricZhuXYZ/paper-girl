@@ -1,5 +1,5 @@
 import { PromptDebugPanel } from '@/components/PromptDebugPanel'
 
-export default function PromptsPage() {
+export default function AdminPage() {
   return <PromptDebugPanel />
 }

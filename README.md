@@ -44,4 +44,4 @@ when direct TCP access to port 5432 is unavailable.
 
 - `/` role selection
 - `/chat/[characterId]` WeChat-style chat
-- `/prompts` character prompt and voice debug page
+- `/admin` character prompt and voice debug page
