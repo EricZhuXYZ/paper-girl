@@ -2,9 +2,9 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: '纸片人男友',
+    name: '纸片人女友',
     short_name: '纸片人',
-    description: '你的专属AI男友',
+    description: '你的专属AI女友',
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',
